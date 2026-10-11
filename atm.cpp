@@ -1,10 +1,13 @@
 #include <iostream>
 #include <string>
+#include <cmath>
 #include <cstdlib>
 
 using namespace std;
 
 const int MAX_ATTEMPTS = 3;
+const double MAX_DEPOSIT = 1000000.00;
+const double MAX_BALANCE = 999999999.99;
 
 string readLine()
 {
@@ -60,6 +63,50 @@ int readInt()
     }
 
     return stoi(text);
+}
+
+double readDouble()
+{
+    string text = trim(readLine());
+
+    if (text.empty() || text.length() > 15)
+    {
+        return -1.0;
+    }
+
+    int dotCount = 0;
+    int digitCount = 0;
+    int digitsAfterDot = 0;
+
+    for (int i = 0; i < (int)text.length(); i++)
+    {
+        char c = text[i];
+
+        if (c == '.')
+        {
+            dotCount++;
+        }
+        else if (c >= '0' && c <= '9')
+        {
+            digitCount++;
+
+            if (dotCount == 1)
+            {
+                digitsAfterDot++;
+            }
+        }
+        else
+        {
+            return -1.0;
+        }
+    }
+
+    if (dotCount > 1 || digitCount == 0 || digitsAfterDot > 2)
+    {
+        return -1.0;
+    }
+
+    return stod(text);
 }
 
 string formatMoney(double amount)
@@ -165,7 +212,36 @@ int main()
 
             case 2:
             {
-                cout << "\nDeposit is coming soon." << endl;
+                cout << "\n------------------------------" << endl;
+                cout << "            DEPOSIT" << endl;
+                cout << "------------------------------" << endl;
+                cout << "Enter deposit amount: PHP ";
+
+                double depositAmount = readDouble();
+
+                if (depositAmount <= 0)
+                {
+                    cout << "\nInvalid deposit amount." << endl;
+                    cout << "Enter a number greater than zero with at most 2 decimal places." << endl;
+                }
+                else if (depositAmount > MAX_DEPOSIT)
+                {
+                    cout << "\nDeposit declined." << endl;
+                    cout << "Maximum per deposit: PHP " << formatMoney(MAX_DEPOSIT) << endl;
+                }
+                else if (balance + depositAmount > MAX_BALANCE)
+                {
+                    cout << "\nDeposit declined." << endl;
+                    cout << "Maximum account balance: PHP " << formatMoney(MAX_BALANCE) << endl;
+                }
+                else
+                {
+                    balance = round((balance + depositAmount) * 100) / 100;
+
+                    cout << "\nDeposit successful." << endl;
+                    cout << "Amount Deposited: PHP " << formatMoney(depositAmount) << endl;
+                    cout << "New Balance:      PHP " << formatMoney(balance) << endl;
+                }
                 break;
             }
 

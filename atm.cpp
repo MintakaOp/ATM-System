@@ -2,9 +2,15 @@
 #include <string>
 #include <cmath>
 #include <cstdlib>
+#include <algorithm>
+
+#ifdef _WIN32
+#include <conio.h>
+#endif
 
 using namespace std;
 
+const int PIN_LENGTH = 4;
 const int MAX_ATTEMPTS = 3;
 const double MAX_DEPOSIT = 1000000.00;
 const double MAX_BALANCE = 999999999.99;
@@ -51,6 +57,51 @@ bool isAllDigits(const string& text)
     }
 
     return true;
+}
+
+bool isValidPin(const string& text)
+{
+    return (int)text.length() == PIN_LENGTH && isAllDigits(text);
+}
+
+string getMaskedPIN(string prompt)
+{
+    string enteredPin = "";
+
+    cout << prompt << flush;
+
+#ifdef _WIN32
+    while (true)
+    {
+        int key = _getch();
+
+        if (key == 0 || key == 224)
+        {
+            _getch();
+        }
+        else if (key >= '0' && key <= '9' && (int)enteredPin.length() < PIN_LENGTH)
+        {
+            enteredPin += (char)key;
+            cout << "*";
+        }
+        else if (key == '\b' && !enteredPin.empty())
+        {
+            enteredPin.pop_back();
+            cout << "\b \b";
+        }
+        else if (key == '\r' && (int)enteredPin.length() == PIN_LENGTH)
+        {
+            break;
+        }
+    }
+
+    cout << endl;
+#else
+    cout << "(PIN will be visible on this system) ";
+    enteredPin = trim(readLine());
+#endif
+
+    return enteredPin;
 }
 
 int readInt()
@@ -158,9 +209,7 @@ int main()
 
     while (attempts < MAX_ATTEMPTS && !authenticated)
     {
-        string enteredPin;
-        cout << "Enter PIN: ";
-        enteredPin = trim(readLine());
+        string enteredPin = getMaskedPIN("Enter PIN: ");
 
         if (enteredPin == pin)
         {
@@ -301,63 +350,99 @@ int main()
                     cout << "[1] PHP 100 bills" << endl;
                     cout << "[2] PHP 500 bills" << endl;
                     cout << "[3] PHP 1000 bills" << endl;
+                    cout << "[4] Automatic Denomination" << endl;
                     cout << "Enter choice: ";
 
                     dispensingMethod = readInt();
 
-                    if (dispensingMethod < 1 || dispensingMethod > 3)
+                    if (dispensingMethod < 1 || dispensingMethod > 4)
                     {
-                        cout << "Invalid choice. Please select 1 to 3." << endl;
+                        cout << "Invalid choice. Please select 1 to 4." << endl;
                     }
-                } while (dispensingMethod < 1 || dispensingMethod > 3);
+                } while (dispensingMethod < 1 || dispensingMethod > 4);
 
-                int denomination;
-                int available;
+                if (dispensingMethod <= 3)
+                {
+                    int denomination;
+                    int available;
 
-                if (dispensingMethod == 1)
-                {
-                    denomination = 100;
-                    available = bills100;
-                }
-                else if (dispensingMethod == 2)
-                {
-                    denomination = 500;
-                    available = bills500;
+                    if (dispensingMethod == 1)
+                    {
+                        denomination = 100;
+                        available = bills100;
+                    }
+                    else if (dispensingMethod == 2)
+                    {
+                        denomination = 500;
+                        available = bills500;
+                    }
+                    else
+                    {
+                        denomination = 1000;
+                        available = bills1000;
+                    }
+
+                    if (withdrawalAmount % denomination != 0)
+                    {
+                        cout << "\nUnable to dispense PHP " << withdrawalAmount << endl;
+                        cout << "using PHP " << denomination << " bills." << endl;
+                        cout << "Transaction cancelled." << endl;
+                        break;
+                    }
+
+                    int requiredBills = withdrawalAmount / denomination;
+
+                    if (requiredBills > available)
+                    {
+                        cout << "\nInsufficient PHP " << denomination << " bills in the ATM." << endl;
+                        cout << "Transaction cancelled." << endl;
+                        break;
+                    }
+
+                    if (dispensingMethod == 1)
+                    {
+                        use100 = requiredBills;
+                    }
+                    else if (dispensingMethod == 2)
+                    {
+                        use500 = requiredBills;
+                    }
+                    else
+                    {
+                        use1000 = requiredBills;
+                    }
                 }
                 else
                 {
-                    denomination = 1000;
-                    available = bills1000;
-                }
+                    bool found = false;
+                    int maxThousands = min(bills1000, withdrawalAmount / 1000);
 
-                if (withdrawalAmount % denomination != 0)
-                {
-                    cout << "\nUnable to dispense PHP " << withdrawalAmount << endl;
-                    cout << "using PHP " << denomination << " bills." << endl;
-                    cout << "Transaction cancelled." << endl;
-                    break;
-                }
+                    for (int a = maxThousands; a >= 0 && !found; a--)
+                    {
+                        int afterThousands = withdrawalAmount - (a * 1000);
+                        int maxFiveHundreds = min(bills500, afterThousands / 500);
 
-                int requiredBills = withdrawalAmount / denomination;
+                        for (int b = maxFiveHundreds; b >= 0 && !found; b--)
+                        {
+                            int remaining = afterThousands - (b * 500);
 
-                if (requiredBills > available)
-                {
-                    cout << "\nInsufficient PHP " << denomination << " bills in the ATM." << endl;
-                    cout << "Transaction cancelled." << endl;
-                    break;
-                }
+                            if (remaining / 100 <= bills100)
+                            {
+                                use1000 = a;
+                                use500 = b;
+                                use100 = remaining / 100;
+                                found = true;
+                            }
+                        }
+                    }
 
-                if (dispensingMethod == 1)
-                {
-                    use100 = requiredBills;
-                }
-                else if (dispensingMethod == 2)
-                {
-                    use500 = requiredBills;
-                }
-                else
-                {
-                    use1000 = requiredBills;
+                    if (!found)
+                    {
+                        cout << "\nUnable to dispense the requested amount" << endl;
+                        cout << "using the available banknotes." << endl;
+                        cout << "Transaction cancelled." << endl;
+                        break;
+                    }
                 }
 
                 cout << "\nDispensing cash..." << endl;
@@ -412,7 +497,44 @@ int main()
 
             case 5:
             {
-                cout << "\nChange PIN is coming soon." << endl;
+                cout << "\n------------------------------" << endl;
+                cout << "          CHANGE PIN" << endl;
+                cout << "------------------------------" << endl;
+
+                string currentPin = getMaskedPIN("Enter current PIN: ");
+
+                if (currentPin != pin)
+                {
+                    cout << "\nIncorrect current PIN." << endl;
+                    cout << "PIN was not changed." << endl;
+                    break;
+                }
+
+                string newPin = getMaskedPIN("Enter new PIN:     ");
+                string confirmPin = getMaskedPIN("Confirm new PIN:   ");
+
+                if (!isValidPin(newPin))
+                {
+                    cout << "\nThe PIN must be exactly " << PIN_LENGTH << " digits." << endl;
+                    cout << "PIN was not changed." << endl;
+                }
+                else if (newPin != confirmPin)
+                {
+                    cout << "\nPIN confirmation does not match." << endl;
+                    cout << "PIN was not changed." << endl;
+                }
+                else if (newPin == pin)
+                {
+                    cout << "\nThe new PIN must be different from the current PIN." << endl;
+                    cout << "PIN was not changed." << endl;
+                }
+                else
+                {
+                    pin = newPin;
+
+                    cout << "\nPIN successfully changed." << endl;
+                }
+
                 break;
             }
 

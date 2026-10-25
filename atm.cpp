@@ -145,6 +145,9 @@ int main()
     int accountNumber = 20260001;
     string pin = "1234";
     double balance = 10000.00;
+    int bills100 = 20;
+    int bills500 = 10;
+    int bills1000 = 10;
 
     cout << "\n========================================" << endl;
     cout << "             CSDC BANK ATM" << endl;
@@ -247,7 +250,157 @@ int main()
 
             case 3:
             {
-                cout << "\nWithdraw is coming soon." << endl;
+                int withdrawalAmount;
+
+                cout << "\n------------------------------" << endl;
+                cout << "           WITHDRAW" << endl;
+                cout << "------------------------------" << endl;
+                cout << "Enter withdrawal amount: PHP ";
+
+                withdrawalAmount = readInt();
+
+                if (withdrawalAmount <= 0)
+                {
+                    cout << "\nInvalid withdrawal amount." << endl;
+                    cout << "Withdrawal must be a whole number greater than zero." << endl;
+                    break;
+                }
+
+                if (withdrawalAmount % 100 != 0)
+                {
+                    cout << "\nInvalid withdrawal amount." << endl;
+                    cout << "Amount must be a multiple of PHP 100." << endl;
+                    break;
+                }
+
+                if (withdrawalAmount > balance)
+                {
+                    cout << "\nTransaction declined." << endl;
+                    cout << "Insufficient account balance." << endl;
+                    break;
+                }
+
+                int atmCash = bills100 * 100 + bills500 * 500 + bills1000 * 1000;
+
+                if (withdrawalAmount > atmCash)
+                {
+                    cout << "\nTransaction declined." << endl;
+                    cout << "Insufficient cash in the ATM." << endl;
+                    break;
+                }
+
+                int use100 = 0;
+                int use500 = 0;
+                int use1000 = 0;
+
+                int dispensingMethod;
+
+                do
+                {
+                    cout << "\nSelect cash dispensing method:" << endl;
+                    cout << "[1] PHP 100 bills" << endl;
+                    cout << "[2] PHP 500 bills" << endl;
+                    cout << "[3] PHP 1000 bills" << endl;
+                    cout << "Enter choice: ";
+
+                    dispensingMethod = readInt();
+
+                    if (dispensingMethod < 1 || dispensingMethod > 3)
+                    {
+                        cout << "Invalid choice. Please select 1 to 3." << endl;
+                    }
+                } while (dispensingMethod < 1 || dispensingMethod > 3);
+
+                int denomination;
+                int available;
+
+                if (dispensingMethod == 1)
+                {
+                    denomination = 100;
+                    available = bills100;
+                }
+                else if (dispensingMethod == 2)
+                {
+                    denomination = 500;
+                    available = bills500;
+                }
+                else
+                {
+                    denomination = 1000;
+                    available = bills1000;
+                }
+
+                if (withdrawalAmount % denomination != 0)
+                {
+                    cout << "\nUnable to dispense PHP " << withdrawalAmount << endl;
+                    cout << "using PHP " << denomination << " bills." << endl;
+                    cout << "Transaction cancelled." << endl;
+                    break;
+                }
+
+                int requiredBills = withdrawalAmount / denomination;
+
+                if (requiredBills > available)
+                {
+                    cout << "\nInsufficient PHP " << denomination << " bills in the ATM." << endl;
+                    cout << "Transaction cancelled." << endl;
+                    break;
+                }
+
+                if (dispensingMethod == 1)
+                {
+                    use100 = requiredBills;
+                }
+                else if (dispensingMethod == 2)
+                {
+                    use500 = requiredBills;
+                }
+                else
+                {
+                    use1000 = requiredBills;
+                }
+
+                cout << "\nDispensing cash..." << endl;
+
+                for (int i = 1; i <= use1000; i++)
+                {
+                    cout << "Bill " << i << ": PHP 1000" << endl;
+                }
+
+                for (int i = 1; i <= use500; i++)
+                {
+                    cout << "Bill " << use1000 + i << ": PHP 500" << endl;
+                }
+
+                for (int i = 1; i <= use100; i++)
+                {
+                    cout << "Bill " << use1000 + use500 + i << ": PHP 100" << endl;
+                }
+
+                cout << "\nCash Breakdown:" << endl;
+                if (use1000 > 0)
+                {
+                    cout << "PHP 1000 x " << use1000 << " = PHP " << use1000 * 1000 << endl;
+                }
+                if (use500 > 0)
+                {
+                    cout << "PHP 500  x " << use500 << " = PHP " << use500 * 500 << endl;
+                }
+                if (use100 > 0)
+                {
+                    cout << "PHP 100  x " << use100 << " = PHP " << use100 * 100 << endl;
+                }
+
+                balance = round((balance - withdrawalAmount) * 100) / 100;
+                bills100 = bills100 - use100;
+                bills500 = bills500 - use500;
+                bills1000 = bills1000 - use1000;
+
+                cout << "\nWithdrawal successful." << endl;
+                cout << "Amount Withdrawn:  PHP " << formatMoney(withdrawalAmount) << endl;
+                cout << "Remaining Balance: PHP " << formatMoney(balance) << endl;
+                cout << "Please take your cash." << endl;
+
                 break;
             }
 

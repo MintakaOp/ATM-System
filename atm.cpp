@@ -1,4 +1,6 @@
 #include <iostream>
+#include <iomanip>
+#include <fstream>
 #include <string>
 #include <cmath>
 #include <cstdlib>
@@ -14,6 +16,8 @@ const int PIN_LENGTH = 4;
 const int MAX_ATTEMPTS = 3;
 const double MAX_DEPOSIT = 1000000.00;
 const double MAX_BALANCE = 999999999.99;
+const int MAX_SAVED_BILLS = 100000;
+const string SAVE_FILE = "atm_data.txt";
 
 string readLine()
 {
@@ -190,6 +194,29 @@ string formatMoney(double amount)
     return result + "." + centavoText;
 }
 
+void saveData(double balance, const string& pin, int bills100, int bills500, int bills1000)
+{
+    ofstream saveFile(SAVE_FILE.c_str());
+
+    if (!saveFile)
+    {
+        cout << "Warning: unable to save ATM data." << endl;
+        return;
+    }
+
+    saveFile << fixed << setprecision(2) << balance << endl;
+    saveFile << pin << endl;
+    saveFile << bills100 << endl;
+    saveFile << bills500 << endl;
+    saveFile << bills1000 << endl;
+    saveFile.close();
+
+    if (saveFile.fail())
+    {
+        cout << "Warning: unable to save ATM data." << endl;
+    }
+}
+
 int main()
 {
     string accountName = "Juan Dela Cruz";
@@ -199,6 +226,45 @@ int main()
     int bills100 = 20;
     int bills500 = 10;
     int bills1000 = 10;
+
+    double savedBalance = 0;
+    string savedPin = "";
+    int saved100 = 0;
+    int saved500 = 0;
+    int saved1000 = 0;
+    bool dataLoaded = false;
+
+    ifstream loadFile(SAVE_FILE.c_str());
+
+    if (loadFile >> savedBalance >> savedPin >> saved100 >> saved500 >> saved1000)
+    {
+        bool pinValid = isValidPin(savedPin);
+        bool balanceValid = (savedBalance >= 0 && savedBalance <= MAX_BALANCE);
+        bool bills100Valid = (saved100 >= 0 && saved100 <= MAX_SAVED_BILLS);
+        bool bills500Valid = (saved500 >= 0 && saved500 <= MAX_SAVED_BILLS);
+        bool bills1000Valid = (saved1000 >= 0 && saved1000 <= MAX_SAVED_BILLS);
+
+        if (pinValid && balanceValid && bills100Valid && bills500Valid && bills1000Valid)
+        {
+            balance = savedBalance;
+            pin = savedPin;
+            bills100 = saved100;
+            bills500 = saved500;
+            bills1000 = saved1000;
+            dataLoaded = true;
+        }
+    }
+
+    loadFile.close();
+
+    if (dataLoaded)
+    {
+        cout << "[System] Saved ATM data loaded successfully." << endl;
+    }
+    else
+    {
+        cout << "[System] No valid saved data found. Using default values." << endl;
+    }
 
     cout << "\n========================================" << endl;
     cout << "             CSDC BANK ATM" << endl;
@@ -289,6 +355,7 @@ int main()
                 else
                 {
                     balance = round((balance + depositAmount) * 100) / 100;
+                    saveData(balance, pin, bills100, bills500, bills1000);
 
                     cout << "\nDeposit successful." << endl;
                     cout << "Amount Deposited: PHP " << formatMoney(depositAmount) << endl;
@@ -481,6 +548,8 @@ int main()
                 bills500 = bills500 - use500;
                 bills1000 = bills1000 - use1000;
 
+                saveData(balance, pin, bills100, bills500, bills1000);
+
                 cout << "\nWithdrawal successful." << endl;
                 cout << "Amount Withdrawn:  PHP " << formatMoney(withdrawalAmount) << endl;
                 cout << "Remaining Balance: PHP " << formatMoney(balance) << endl;
@@ -531,6 +600,7 @@ int main()
                 else
                 {
                     pin = newPin;
+                    saveData(balance, pin, bills100, bills500, bills1000);
 
                     cout << "\nPIN successfully changed." << endl;
                 }
@@ -552,6 +622,8 @@ int main()
         }
 
     } while (!exitATM);
+
+    saveData(balance, pin, bills100, bills500, bills1000);
 
     cout << "\n========================================" << endl;
     cout << "         TRANSACTION COMPLETE" << endl;

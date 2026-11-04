@@ -18,6 +18,9 @@ const double MAX_DEPOSIT = 1000000.00;
 const double MAX_BALANCE = 999999999.99;
 const int MAX_SAVED_BILLS = 100000;
 const string SAVE_FILE = "atm_data.txt";
+const int MAX_WITHDRAWAL = 20000;
+const double MIN_BALANCE = 500.00;
+const double WITHDRAWAL_FEE = 15.00;
 
 string readLine()
 {
@@ -66,6 +69,26 @@ bool isAllDigits(const string& text)
 bool isValidPin(const string& text)
 {
     return (int)text.length() == PIN_LENGTH && isAllDigits(text);
+}
+
+bool askYesNo(const string& prompt)
+{
+    while (true)
+    {
+        cout << prompt << " (Y/N): ";
+        string answer = trim(readLine());
+
+        if (answer == "Y" || answer == "y")
+        {
+            return true;
+        }
+        if (answer == "N" || answer == "n")
+        {
+            return false;
+        }
+
+        cout << "Please type Y or N." << endl;
+    }
 }
 
 string getMaskedPIN(string prompt)
@@ -325,6 +348,7 @@ int main()
                 cout << "        BALANCE INQUIRY" << endl;
                 cout << "------------------------------" << endl;
                 cout << "Current Balance: PHP " << formatMoney(balance) << endl;
+                cout << "Minimum maintaining balance: PHP " << formatMoney(MIN_BALANCE) << endl;
                 break;
             }
 
@@ -365,15 +389,63 @@ int main()
             }
 
             case 3:
+            case 4:
             {
                 int withdrawalAmount;
 
-                cout << "\n------------------------------" << endl;
-                cout << "           WITHDRAW" << endl;
-                cout << "------------------------------" << endl;
-                cout << "Enter withdrawal amount: PHP ";
+                if (choice == 3)
+                {
+                    cout << "\n------------------------------" << endl;
+                    cout << "           WITHDRAW" << endl;
+                    cout << "------------------------------" << endl;
+                    cout << "Max per transaction: PHP " << formatMoney(MAX_WITHDRAWAL) << endl;
+                    cout << "Transaction fee:     PHP " << formatMoney(WITHDRAWAL_FEE) << endl;
+                    cout << "Enter withdrawal amount: PHP ";
 
-                withdrawalAmount = readInt();
+                    withdrawalAmount = readInt();
+                }
+                else
+                {
+                    cout << "\n------------------------------" << endl;
+                    cout << "           FAST CASH" << endl;
+                    cout << "------------------------------" << endl;
+                    cout << "Transaction fee: PHP " << formatMoney(WITHDRAWAL_FEE) << endl;
+                    cout << "\n[1] PHP 500" << endl;
+                    cout << "[2] PHP 1,000" << endl;
+                    cout << "[3] PHP 2,000" << endl;
+                    cout << "[4] PHP 5,000" << endl;
+                    cout << "[5] Cancel" << endl;
+                    cout << "Enter choice: ";
+
+                    int fastChoice = readInt();
+
+                    if (fastChoice == 1)
+                    {
+                        withdrawalAmount = 500;
+                    }
+                    else if (fastChoice == 2)
+                    {
+                        withdrawalAmount = 1000;
+                    }
+                    else if (fastChoice == 3)
+                    {
+                        withdrawalAmount = 2000;
+                    }
+                    else if (fastChoice == 4)
+                    {
+                        withdrawalAmount = 5000;
+                    }
+                    else if (fastChoice == 5)
+                    {
+                        cout << "\nFast Cash cancelled." << endl;
+                        break;
+                    }
+                    else
+                    {
+                        cout << "\nInvalid choice. Fast Cash cancelled." << endl;
+                        break;
+                    }
+                }
 
                 if (withdrawalAmount <= 0)
                 {
@@ -389,10 +461,46 @@ int main()
                     break;
                 }
 
-                if (withdrawalAmount > balance)
+                if (withdrawalAmount > MAX_WITHDRAWAL)
+                {
+                    cout << "\nTransaction declined." << endl;
+                    cout << "Maximum withdrawal per transaction: PHP "
+                        << formatMoney(MAX_WITHDRAWAL) << endl;
+                    break;
+                }
+
+                if (withdrawalAmount + WITHDRAWAL_FEE > balance)
                 {
                     cout << "\nTransaction declined." << endl;
                     cout << "Insufficient account balance." << endl;
+                    cout << "(Amount + PHP " << formatMoney(WITHDRAWAL_FEE)
+                        << " fee must not exceed your balance.)" << endl;
+                    break;
+                }
+
+                if (balance - withdrawalAmount - WITHDRAWAL_FEE < MIN_BALANCE - 0.005)
+                {
+                    double spendable = balance - WITHDRAWAL_FEE - MIN_BALANCE;
+                    int maxAllowed = 0;
+
+                    if (spendable >= 100)
+                    {
+                        maxAllowed = (int)((spendable + 0.005) / 100) * 100;
+                    }
+
+                    cout << "\nTransaction declined." << endl;
+                    cout << "Your account must keep a minimum balance of PHP "
+                        << formatMoney(MIN_BALANCE) << "." << endl;
+
+                    if (maxAllowed > 0)
+                    {
+                        cout << "You can withdraw up to PHP " << formatMoney(maxAllowed)
+                            << " right now." << endl;
+                    }
+                    else
+                    {
+                        cout << "Your balance is too low to withdraw right now." << endl;
+                    }
                     break;
                 }
 
@@ -409,24 +517,27 @@ int main()
                 int use500 = 0;
                 int use1000 = 0;
 
-                int dispensingMethod;
+                int dispensingMethod = 4;
 
-                do
+                if (choice == 3)
                 {
-                    cout << "\nSelect cash dispensing method:" << endl;
-                    cout << "[1] PHP 100 bills" << endl;
-                    cout << "[2] PHP 500 bills" << endl;
-                    cout << "[3] PHP 1000 bills" << endl;
-                    cout << "[4] Automatic Denomination" << endl;
-                    cout << "Enter choice: ";
-
-                    dispensingMethod = readInt();
-
-                    if (dispensingMethod < 1 || dispensingMethod > 4)
+                    do
                     {
-                        cout << "Invalid choice. Please select 1 to 4." << endl;
-                    }
-                } while (dispensingMethod < 1 || dispensingMethod > 4);
+                        cout << "\nSelect cash dispensing method:" << endl;
+                        cout << "[1] PHP 100 bills" << endl;
+                        cout << "[2] PHP 500 bills" << endl;
+                        cout << "[3] PHP 1000 bills" << endl;
+                        cout << "[4] Automatic Denomination" << endl;
+                        cout << "Enter choice: ";
+
+                        dispensingMethod = readInt();
+
+                        if (dispensingMethod < 1 || dispensingMethod > 4)
+                        {
+                            cout << "Invalid choice. Please select 1 to 4." << endl;
+                        }
+                    } while (dispensingMethod < 1 || dispensingMethod > 4);
+                }
 
                 if (dispensingMethod <= 3)
                 {
@@ -543,7 +654,7 @@ int main()
                     cout << "PHP 100  x " << use100 << " = PHP " << use100 * 100 << endl;
                 }
 
-                balance = round((balance - withdrawalAmount) * 100) / 100;
+                balance = round((balance - withdrawalAmount - WITHDRAWAL_FEE) * 100) / 100;
                 bills100 = bills100 - use100;
                 bills500 = bills500 - use500;
                 bills1000 = bills1000 - use1000;
@@ -552,15 +663,10 @@ int main()
 
                 cout << "\nWithdrawal successful." << endl;
                 cout << "Amount Withdrawn:  PHP " << formatMoney(withdrawalAmount) << endl;
+                cout << "Transaction Fee:   PHP " << formatMoney(WITHDRAWAL_FEE) << endl;
                 cout << "Remaining Balance: PHP " << formatMoney(balance) << endl;
                 cout << "Please take your cash." << endl;
 
-                break;
-            }
-
-            case 4:
-            {
-                cout << "\nFast Cash is coming soon." << endl;
                 break;
             }
 
@@ -618,6 +724,14 @@ int main()
             {
                 cout << "\nInvalid selection." << endl;
                 cout << "Please choose an option from 1 to 6." << endl;
+            }
+        }
+
+        if (choice >= 1 && choice <= 5)
+        {
+            if (!askYesNo("\nWould you like to do another transaction?"))
+            {
+                exitATM = true;
             }
         }
 
